@@ -1,4 +1,11 @@
-.env/
+# Environment files
+.env
+
+# Virtual environments
 .venv/
+
+# Browser profile
 .chatgpt-browser-profile/
+
+# Python cache
 __pycache__/
