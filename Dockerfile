@@ -11,8 +11,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
-RUN playwright install chromium
+# Install Playwright browsers - BOTH chromium AND chrome
+RUN playwright install chromium chrome
 
 # Copy application code
 COPY app.py chatgpt_client.py ./
@@ -23,15 +23,18 @@ EXPOSE 8000
 # Force Python to output logs immediately (critical for Docker)
 ENV PYTHONUNBUFFERED=1
 
-# Environment defaults (can be overridden in Coolify)
+# Environment defaults for Docker/Coolify
+# NOTE: Do NOT set CHATGPT_BROWSER_CHANNEL - let it use default chromium
 ENV UNLIMITEDGPT_HEADLESS=false
 ENV CHATGPT_USE_STEALTH=true
 ENV CHATGPT_REAL_BROWSER=false
 ENV CHATGPT_IGNORE_AUTOMATION=true
 
-# Create startup script for better logging
+# Create startup script for better handling
 RUN echo '#!/bin/bash\n\
+    set -e\n\
     echo "Starting Xvfb..."\n\
+    rm -f /tmp/.X99-lock 2>/dev/null || true\n\
     Xvfb :99 -screen 0 1920x1080x24 &\n\
     sleep 2\n\
     export DISPLAY=:99\n\
