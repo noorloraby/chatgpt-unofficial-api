@@ -65,6 +65,8 @@ The server reads configuration from environment variables:
 - `CHATGPT_USE_STEALTH` (optional): `"true"` or `"false"`; defaults to `true`.
   When true, applies Playwright stealth scripts to better simulate a real
   browser.
+- `CHATGPT_DEFAULT_TIMEOUT` (optional): Default response timeout in seconds
+  when requests omit `timeout` (defaults to `240`).
 
 You can place them in `.env` for local use.
 
@@ -100,7 +102,8 @@ Request body:
 Fields:
 
 - `message` (string, required): Prompt text.
-- `timeout` (int, optional): Max wait time for a response in seconds.
+- `timeout` (int, optional): Max wait time for a response in seconds. Defaults
+  to `CHATGPT_DEFAULT_TIMEOUT` (or `240`).
 - `input_mode` (string, optional): `"INSTANT"` or `"SLOW"`.
 - `input_delay` (float, optional): Delay between keystrokes when using slow
   typing.

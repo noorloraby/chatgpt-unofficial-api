@@ -21,6 +21,11 @@ STOP_BUTTON_SELECTORS = [
 ]
 TEMP_CHAT_ON_SELECTOR = "button[aria-label=\"Turn on temporary chat\"]"
 TEMP_CHAT_OFF_SELECTOR = "button[aria-label=\"Turn off temporary chat\"]"
+CONVERSATION_TURN_SELECTOR = "article[data-testid^=\"conversation-turn-\"]"
+MESSAGE_ROLE_SELECTOR = (
+    "div[data-message-author-role=\"assistant\"],"
+    " div[data-message-author-role=\"user\"]"
+)
 
 
 @dataclass
@@ -116,6 +121,7 @@ class ChatGPTBrowserClient:
             )
         if conversation_id:
             await self._goto_conversation(conversation_id)
+            await self._wait_for_conversation_ready(conversation_id)
         else:
             await self._goto_home()
             if temporary_chat is not None:
@@ -188,6 +194,27 @@ class ChatGPTBrowserClient:
         if self._page.url.startswith(target):
             return
         await self._page.goto(target, wait_until="domcontentloaded")
+
+    async def _wait_for_conversation_ready(self, conversation_id: str) -> None:
+        target = f"{self._base_url}/c/{conversation_id}"
+        try:
+            await self._page.wait_for_url(f"{target}*", timeout=15000)
+        except PlaywrightTimeoutError as exc:
+            raise RuntimeError("Timed out waiting for conversation to load") from exc
+        try:
+            await self._page.wait_for_selector(COMPOSER_SELECTOR, timeout=15000)
+        except PlaywrightTimeoutError as exc:
+            raise RuntimeError("ChatGPT composer not available") from exc
+        try:
+            await self._page.wait_for_selector(
+                f"{CONVERSATION_TURN_SELECTOR}, {MESSAGE_ROLE_SELECTOR}",
+                timeout=10000,
+            )
+        except PlaywrightTimeoutError:
+            try:
+                await self._page.wait_for_load_state("networkidle", timeout=5000)
+            except PlaywrightTimeoutError:
+                pass
 
     async def _goto_home(self) -> None:
         if not self._page.url.startswith(self._base_url):

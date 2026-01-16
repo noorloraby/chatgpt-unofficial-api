@@ -21,15 +21,28 @@ BROWSER_CHANNEL_ENV = "CHATGPT_BROWSER_CHANNEL"
 IGNORE_AUTOMATION_ENV = "CHATGPT_IGNORE_AUTOMATION"
 LAUNCH_ARGS_ENV = "CHATGPT_LAUNCH_ARGS"
 STEALTH_ENV = "CHATGPT_USE_STEALTH"
+DEFAULT_TIMEOUT_ENV = "CHATGPT_DEFAULT_TIMEOUT"
+
+
+def _read_default_timeout() -> int:
+    raw = os.environ.get(DEFAULT_TIMEOUT_ENV, "").strip()
+    if not raw:
+        return 240
+    try:
+        value = int(raw)
+    except ValueError:
+        return 240
+    return max(value, 1)
 
 app = FastAPI()
 _client = None
 _client_lock = asyncio.Lock()
+DEFAULT_TIMEOUT = _read_default_timeout()
 
 
 class ChatRequest(BaseModel):
     message: str
-    timeout: int = 240
+    timeout: int | None = None
     input_mode: Literal["INSTANT", "SLOW"] = "INSTANT"
     input_delay: float = 0.1
     conversation_id: str | None = None
@@ -112,7 +125,7 @@ async def chat(req: ChatRequest) -> dict:
         async with _client_lock:
             response = await _client.send_message(
                 req.message,
-                timeout=req.timeout,
+                timeout=req.timeout if req.timeout is not None else DEFAULT_TIMEOUT,
                 input_mode=req.input_mode,
                 input_delay=req.input_delay,
                 conversation_id=req.conversation_id,

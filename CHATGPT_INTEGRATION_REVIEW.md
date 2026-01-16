@@ -71,6 +71,9 @@ based on `app.py` and `chatgpt_client.py` only.
   - Environment variable name: `CHATGPT_USE_STEALTH`.
   - Accepted values: `"1"`, `"true"`, `"yes"` (case-insensitive).
   - Defaults to enabled.
+- Default response timeout:
+  - Environment variable name: `CHATGPT_DEFAULT_TIMEOUT`.
+  - Value is seconds; defaults to `240` when unset/invalid.
 - Message input behavior:
   - `input_mode`: `"INSTANT"` or `"SLOW"`.
   - `input_delay`: float seconds between keystrokes for `"SLOW"` mode.
