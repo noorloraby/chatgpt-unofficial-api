@@ -1,4 +1,4 @@
 .env/
 .venv/
-.chatgpt-browser/
+.chatgpt-browser-profile/
 __pycache__/
