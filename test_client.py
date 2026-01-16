@@ -5,6 +5,7 @@ import sys
 import urllib.request
 
 API_URL = os.environ.get("CHATGPT_API_URL", "http://127.0.0.1:8000/chat")
+API_KEY = os.environ.get("CHATGPT_API_KEY", "")
 
 
 def main() -> None:
@@ -30,6 +31,12 @@ def main() -> None:
         action="store_true",
         help="Disable temporary chat before sending the message.",
     )
+    parser.add_argument(
+        "--api-key",
+        dest="api_key",
+        default=API_KEY,
+        help="API key for authentication (or set CHATGPT_API_KEY env var).",
+    )
     args = parser.parse_args()
 
     if args.temporary_chat and args.no_temporary_chat:
@@ -45,10 +52,14 @@ def main() -> None:
         payload["temporary_chat"] = False
     data = json.dumps(payload).encode("utf-8")
 
+    headers = {"Content-Type": "application/json"}
+    if args.api_key:
+        headers["Authorization"] = f"Bearer {args.api_key}"
+
     req = urllib.request.Request(
         API_URL,
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=240) as resp:

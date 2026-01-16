@@ -2,7 +2,8 @@ import asyncio
 import os
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -22,6 +23,7 @@ IGNORE_AUTOMATION_ENV = "CHATGPT_IGNORE_AUTOMATION"
 LAUNCH_ARGS_ENV = "CHATGPT_LAUNCH_ARGS"
 STEALTH_ENV = "CHATGPT_USE_STEALTH"
 DEFAULT_TIMEOUT_ENV = "CHATGPT_DEFAULT_TIMEOUT"
+API_KEY_ENV = "CHATGPT_API_KEY"
 
 
 def _read_default_timeout() -> int:
@@ -38,6 +40,31 @@ app = FastAPI()
 _client = None
 _client_lock = asyncio.Lock()
 DEFAULT_TIMEOUT = _read_default_timeout()
+
+# API Key authentication
+security = HTTPBearer(auto_error=False)
+_api_key = os.environ.get(API_KEY_ENV, "").strip()
+
+
+async def verify_api_key(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+) -> None:
+    """Verify the API key if one is configured."""
+    if not _api_key:
+        # No API key configured - allow all requests
+        return
+    if credentials is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing Authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if credentials.credentials != _api_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 class ChatRequest(BaseModel):
@@ -116,7 +143,7 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(verify_api_key)])
 async def chat(req: ChatRequest) -> dict:
     if _client is None:
         raise HTTPException(status_code=500, detail="Client not initialized")
