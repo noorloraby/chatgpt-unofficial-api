@@ -6,6 +6,7 @@ FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tigervnc-standalone-server \
     tigervnc-tools \
+    python3-venv \
     websockify \
     novnc \
     && rm -rf /var/lib/apt/lists/*
