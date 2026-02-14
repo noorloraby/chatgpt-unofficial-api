@@ -82,6 +82,29 @@ Check health:
 curl http://127.0.0.1:8000/health
 ```
 
+## Browser view in Docker/Coolify
+
+The Docker image now includes `TigerVNC (Xvnc) + noVNC` and runs without nginx.
+Expose two services through Coolify:
+
+- API service: container port `8000` (FastAPI/uvicorn)
+- noVNC service: container port `6080` (browser viewer/control)
+
+Once routed, open the noVNC endpoint and use:
+
+- `/vnc.html?autoconnect=1&resize=remote`
+
+Useful env vars:
+
+- `ENABLE_VNC` (default `true`): enable/disable noVNC process.
+- `VNC_PASSWORD` (optional): enables password auth in the VNC server.
+- `VNC_PORT` (default `5900`): internal VNC TCP port exposed by Xvnc.
+- `NOVNC_PORT` (default `6080`): noVNC web endpoint port.
+- `APP_PORT` (default `8000`): FastAPI/uvicorn port.
+- `DISPLAY_NUM` (default `:99`): X display number used by Xvnc.
+- `VNC_GEOMETRY` (default `1920x1080`): virtual desktop size.
+- `VNC_DEPTH` (default `24`): virtual desktop color depth.
+
 ## Using the API
 
 ### `POST /chat`

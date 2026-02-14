@@ -3,7 +3,12 @@ import json
 import os
 import sys
 import urllib.request
+from dotenv import load_dotenv
 
+from response_filter import filter_response
+
+
+load_dotenv() 
 API_URL = os.environ.get("CHATGPT_API_URL", "http://127.0.0.1:8000/chat")
 API_KEY = os.environ.get("CHATGPT_API_KEY", "")
 
@@ -64,9 +69,21 @@ def main() -> None:
     )
     with urllib.request.urlopen(req, timeout=240) as resp:
         body = resp.read().decode("utf-8")
+    
+    # Parse and filter the response
+    result = json.loads(body)
+    if "response" in result:
+        result["response"] = filter_response(result["response"])
+    
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    print(body)
+    
+    # Print response as plain text (with real newlines)
+    print(result.get("response", ""))
+    
+    # Print metadata if present
+    if result.get("conversation_id"):
+        print(f"\n--- conversation_id: {result['conversation_id']} ---")
 
 
 if __name__ == "__main__":

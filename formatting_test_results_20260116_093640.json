@@ -1,0 +1,56 @@
+[
+  {
+    "prompt": "Write a hello world function in Python",
+    "response": "Sure! Here’s a simple Hello, World! function in Python:\npythonCopy codedef hello_world():\n    print(\"Hello, World!\")\n\n# Call the function\nhello_world()",
+    "conversation_id": null,
+    "issues_found": [
+      {
+        "pattern": "pythonCopy code",
+        "description": "Python code block with Copy prefix",
+        "count": 1
+      },
+      {
+        "pattern": "Copy code",
+        "description": "Generic Copy code prefix",
+        "count": 1
+      }
+    ],
+    "status": "success"
+  },
+  {
+    "prompt": "Write a JavaScript function that adds two numbers",
+    "response": null,
+    "error": "HTTP Error 502: Bad Gateway",
+    "status": "error"
+  },
+  {
+    "prompt": "Give me a short HTML example with a heading and paragraph",
+    "response": null,
+    "error": "HTTP Error 502: Bad Gateway",
+    "status": "error"
+  },
+  {
+    "prompt": "Write a SQL query to select all users from a users table",
+    "response": null,
+    "error": "HTTP Error 502: Bad Gateway",
+    "status": "error"
+  },
+  {
+    "prompt": "Write a simple Bash script that prints current date",
+    "response": null,
+    "error": "HTTP Error 502: Bad Gateway",
+    "status": "error"
+  },
+  {
+    "prompt": "Explain what a list is in Python in 2 sentences",
+    "response": null,
+    "error": "HTTP Error 502: Bad Gateway",
+    "status": "error"
+  },
+  {
+    "prompt": "Write a CSS rule to make text red and bold",
+    "response": null,
+    "error": "HTTP Error 502: Bad Gateway",
+    "status": "error"
+  }
+]
