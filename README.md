@@ -118,7 +118,14 @@ Request body:
   "input_mode": "INSTANT",
   "input_delay": 0.1,
   "conversation_id": "existing-chat-id",
-  "temporary_chat": true
+  "temporary_chat": true,
+  "images": [
+    {
+      "name": "photo.jpg",
+      "content_type": "image/jpeg",
+      "data_base64": "BASE64_ENCODED_IMAGE_BYTES"
+    }
+  ]
 }
 ```
 
@@ -134,6 +141,12 @@ Fields:
   `/c/<conversation_id>` before sending the prompt.
 - `temporary_chat` (bool, optional): When `true`, attempts to toggle temporary
   chat before sending. Cannot be combined with `conversation_id`.
+- `images` (array, optional): One or more images to attach before sending:
+  - `name` (string, required): Filename shown in the composer (for example,
+    `receipt.png`).
+  - `content_type` (string, optional): MIME type like `image/png`.
+  - `data_base64` (string, required): Base64 bytes, or a full data URL such as
+    `data:image/png;base64,...`.
 - If `conversation_id` is omitted, the client navigates to the base URL to
   start a new chat for the request.
 

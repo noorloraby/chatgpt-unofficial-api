@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import binascii
+import mimetypes
 import os
 from typing import Literal
 
@@ -7,7 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from chatgpt_client import ChatGPTBrowserClient
+from chatgpt_client import ChatGPTBrowserClient, ChatGPTImage
 
 load_dotenv()
 
@@ -67,6 +70,12 @@ async def verify_api_key(
         )
 
 
+class ChatImageRequest(BaseModel):
+    name: str
+    data_base64: str
+    content_type: str | None = None
+
+
 class ChatRequest(BaseModel):
     message: str
     timeout: int | None = None
@@ -74,6 +83,52 @@ class ChatRequest(BaseModel):
     input_delay: float = 0.1
     conversation_id: str | None = None
     temporary_chat: bool | None = None
+    images: list[ChatImageRequest] | None = None
+
+
+def _decode_base64_image(raw: str) -> tuple[bytes, str | None]:
+    value = raw.strip()
+    detected_type = None
+    if value.startswith("data:"):
+        header, sep, payload = value.partition(",")
+        if not sep:
+            raise ValueError("invalid data URL format")
+        if ";base64" not in header:
+            raise ValueError("data URL must be base64-encoded")
+        detected_type = header.split(";", 1)[0].removeprefix("data:").strip() or None
+        value = payload
+    try:
+        decoded = base64.b64decode(value, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("invalid base64 image payload") from exc
+    if not decoded:
+        raise ValueError("image payload is empty")
+    return decoded, detected_type
+
+
+def _build_image_payloads(images: list[ChatImageRequest] | None) -> list[ChatGPTImage]:
+    if not images:
+        return []
+    payloads: list[ChatGPTImage] = []
+    for idx, image in enumerate(images, start=1):
+        name = image.name.strip()
+        if not name:
+            raise ValueError(f"images[{idx - 1}].name cannot be empty")
+        binary, detected_type = _decode_base64_image(image.data_base64)
+        guessed_type = mimetypes.guess_type(name)[0]
+        content_type = (image.content_type or detected_type or guessed_type or "").strip()
+        if not content_type:
+            content_type = "application/octet-stream"
+        if not content_type.startswith("image/"):
+            raise ValueError(f"images[{idx - 1}].content_type must be an image MIME type")
+        payloads.append(
+            ChatGPTImage(
+                name=name,
+                content_type=content_type,
+                data=binary,
+            )
+        )
+    return payloads
 
 
 @app.on_event("startup")
@@ -147,6 +202,10 @@ def health() -> dict:
 async def chat(req: ChatRequest) -> dict:
     if _client is None:
         raise HTTPException(status_code=500, detail="Client not initialized")
+    try:
+        image_payloads = _build_image_payloads(req.images)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     try:
         async with _client_lock:
@@ -157,6 +216,7 @@ async def chat(req: ChatRequest) -> dict:
                 input_delay=req.input_delay,
                 conversation_id=req.conversation_id,
                 temporary_chat=req.temporary_chat,
+                images=image_payloads,
             )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))

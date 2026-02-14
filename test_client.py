@@ -1,5 +1,7 @@
 import argparse
+import base64
 import json
+import mimetypes
 import os
 import sys
 import urllib.request
@@ -42,6 +44,13 @@ def main() -> None:
         default=API_KEY,
         help="API key for authentication (or set CHATGPT_API_KEY env var).",
     )
+    parser.add_argument(
+        "--image",
+        dest="images",
+        action="append",
+        default=[],
+        help="Path to an image file to attach. Repeat for multiple images.",
+    )
     args = parser.parse_args()
 
     if args.temporary_chat and args.no_temporary_chat:
@@ -55,6 +64,20 @@ def main() -> None:
         payload["temporary_chat"] = True
     elif args.no_temporary_chat:
         payload["temporary_chat"] = False
+    if args.images:
+        payload["images"] = []
+        for image_path in args.images:
+            with open(image_path, "rb") as image_file:
+                encoded = base64.b64encode(image_file.read()).decode("ascii")
+            filename = os.path.basename(image_path)
+            content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            payload["images"].append(
+                {
+                    "name": filename,
+                    "content_type": content_type,
+                    "data_base64": encoded,
+                }
+            )
     data = json.dumps(payload).encode("utf-8")
 
     headers = {"Content-Type": "application/json"}

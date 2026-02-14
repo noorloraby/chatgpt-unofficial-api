@@ -15,6 +15,11 @@ except ImportError:
 
 COMPOSER_SELECTOR = "#prompt-textarea[contenteditable=\"true\"]"
 SEND_BUTTON_SELECTOR = "button[aria-label=\"Send prompt\"]"
+FILE_INPUT_SELECTOR = "form input[type=\"file\"]"
+REMOVE_FILE_SELECTORS = [
+    "button[aria-label=\"Remove file\"]",
+    "button[aria-label^=\"Remove \"]",
+]
 STOP_BUTTON_SELECTORS = [
     "button[aria-label=\"Stop generating\"]",
     "button[aria-label=\"Stop streaming\"]",
@@ -33,6 +38,13 @@ class ChatGPTResponse:
     response: str
     conversation_id: Optional[str]
     failed: bool = False
+
+
+@dataclass
+class ChatGPTImage:
+    name: str
+    content_type: str
+    data: bytes
 
 
 class ChatGPTBrowserClient:
@@ -113,6 +125,7 @@ class ChatGPTBrowserClient:
         input_delay: float = 0.1,
         conversation_id: Optional[str] = None,
         temporary_chat: Optional[bool] = None,
+        images: Optional[list[ChatGPTImage]] = None,
     ) -> ChatGPTResponse:
         await self._ensure_page()
         if conversation_id and temporary_chat:
@@ -127,6 +140,9 @@ class ChatGPTBrowserClient:
             if temporary_chat is not None:
                 await self._set_temporary_chat(temporary_chat)
         await self._wait_for_composer()
+        await self._clear_pending_attachments()
+        if images:
+            await self._attach_images(images)
         previous_id = await self._get_last_assistant_id()
         await self._fill_prompt(message, input_mode, input_delay)
         await self._click_send()
@@ -268,6 +284,39 @@ class ChatGPTBrowserClient:
             await self._page.wait_for_selector(COMPOSER_SELECTOR, timeout=15000)
         except PlaywrightTimeoutError as exc:
             raise RuntimeError("ChatGPT composer not available; check session token") from exc
+
+    async def _clear_pending_attachments(self) -> None:
+        selector = ", ".join(REMOVE_FILE_SELECTORS)
+        remove_buttons = self._page.locator(selector)
+        while await remove_buttons.count() > 0:
+            await remove_buttons.first.click()
+            await asyncio.sleep(0.1)
+
+    async def _attach_images(self, images: list[ChatGPTImage]) -> None:
+        file_input = self._page.locator(FILE_INPUT_SELECTOR).first
+        if await self._page.locator(FILE_INPUT_SELECTOR).count() == 0:
+            raise RuntimeError("Composer file input not found")
+
+        payloads = [
+            {"name": image.name, "mimeType": image.content_type, "buffer": image.data}
+            for image in images
+        ]
+        await file_input.set_input_files(payloads)
+
+        selector = ", ".join(REMOVE_FILE_SELECTORS)
+        try:
+            await self._page.wait_for_function(
+                """
+                ([attachmentSelector, expectedCount]) => {
+                  return document.querySelectorAll(attachmentSelector).length >= expectedCount;
+                }
+                """,
+                arg=[selector, len(images)],
+                timeout=10000,
+            )
+        except PlaywrightTimeoutError:
+            # Upload indicators are UI-dependent; sending can still work even if this check misses.
+            pass
 
     async def _fill_prompt(self, message: str, input_mode: str, input_delay: float) -> None:
         box = self._page.locator(COMPOSER_SELECTOR)
